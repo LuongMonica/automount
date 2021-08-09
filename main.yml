@@ -1,0 +1,43 @@
+---
+- name: install autofs and configure automount to work
+  hosts: automount
+
+  tasks:
+    - name: install autofs
+      become: true
+      apt:
+        name: autofs
+        state: present
+
+    - name: copy indirect home map file
+      become: true
+      template:
+        src: home.autofs
+        dest: /etc/auto.master.d/home.autofs
+
+    - name: copy direct home map file
+      become: true
+      template:
+        src: auto.home
+        dest: /etc/auto.home
+      notify: reload autofs
+
+    - name: copy /etc/profile
+      become: true
+      template:
+        src: profile
+        dest: /etc/profile
+
+    - name: edit pam mkhomedir
+      become: true
+      replace:
+        path: /etc/pam.d/common-session
+        regexp: 'session required pam_mkhomedir.so skel=/etc/skel/ umask=0072'
+        replace: '#session required pam_mkhomedir.so skel=/etc/skel/ umask=0072'
+
+  handlers:
+    - name: reload autofs
+      become: true
+      service:
+        name: autofs
+        state: reloaded
